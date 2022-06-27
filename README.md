@@ -11,7 +11,7 @@ won't refer to a specific version.
 ```
 
 ## URI
-This extension has the URI [`https://github.com/ThorstenSuckow/relfield`](https://github.com/ThorstenSuckow/relfield).
+This extension has the URI [`https://conjoon.org/json-api/ext/relfield`](https://conjoon.org/json-api/ext/relfield).
 
 ## Namespace 
 This extension does not introduce new document members and therefor does not require any namespace.
@@ -143,14 +143,14 @@ Used as the first character in front of a field name provided with the `fields[T
 
 ```http
 GET /articles/1?fields[article]=+version HTTP/1.1
-Accept: application/vnd.api+json;ext=https://github.com/ThorstenSuckow/relfield
+Accept: application/vnd.api+json;ext=https://conjoon.org/json-api/ext/relfield
 ```
 
 responds with
 
 ```http
 HTTP/1.1 200 OK
-Content-Type: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+Content-Type: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 
 {
     "data": {
@@ -172,14 +172,14 @@ If the `+`-character would be omitted in this example, the extension would respo
 
 ```http
 GET /articles/1?fields[article]=version HTTP/1.1
-Accept: application/vnd.api+json;ext=https://github.com/ThorstenSuckow/relfield
+Accept: application/vnd.api+json;ext=https://conjoon.org/json-api/ext/relfield
 ```
 
 responds with
 
 ```http
 HTTP/1.1 200 OK
-Content-Type: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+Content-Type: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 
 {
     "data": {
@@ -198,14 +198,14 @@ Content-Type: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/re
 
 ```http
 GET /articles/1?fields[article]=-text,-teaser HTTP/1.1
-Accept: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 ```
 
 responds with
 
 ```http
 HTTP/1.1 200 OK
-Content-Type: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+Content-Type: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 
 {
     "data": {
@@ -238,26 +238,26 @@ There is **no** specific treatment for
 Example (using the syntax according to base specification with this extension):
 ```http
 GET /articles/1?fields[article]=version,title HTTP/1.1
-Accept: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 ```
 
 responds with
 
 ```http
 HTTP/1.1 200 OK
-Content-Type: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+Content-Type: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 ```
 
 Example (using the syntax according to base specification mixed with syntax introduced with this extension):
 ```http
 GET /articles/1?fields[article]=version,-title HTTP/1.1
-Accept: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 ```
 
 **MUST** respond with
 ```http
 HTTP/1.1 400 Bad Request
-Content-Type: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+Content-Type: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 ```
 
 The response **SHOULD** include a document with a top-level error member that contains one or more error objects providing further details on the fields that caused the error. If this extension is used, prefixed fields are given precedence, and only fields where the prefix is missing **SHOULD** appear in the error object.
@@ -280,14 +280,14 @@ The response **SHOULD** include a document with a top-level error member that co
 Example (`secretfield` not readable by the client):
 ```http
 GET /articles/1?fields[article]=+secretfield HTTP/1.1
-Accept: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 ```
 
 **SHOULD** respond with 
 
 ```http
 HTTP/1.1 403 Forbidden
-Content-Type: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+Content-Type: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 ```
 
 and **SHOULD** include
@@ -307,30 +307,30 @@ and **SHOULD** include
 Example (`secretfield` not readable by the client):
 ```http
 GET /articles/1?fields[article]=-secretfield HTTP/1.1
-Accept: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 ```
 
 **SHOULD** respond with 
 
 ```http
 HTTP/1.1 200 OK
-Content-Type: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+Content-Type: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 ```
 
-## Wildcards
+## Wildcard Queries
 
-A server using this extension **SHOULD** suport the `* (U+002A ASTERISK, “*”)` character as a wildcard for requesting a resource object of a given type. The `*`-character serves as a wildcard for requesting all accessible fields - **default** and **optional** - for a specific resource type and serves mainly to reduce visual complexity of queries.
+A server using this extension **SHOULD** suport the `* (U+002A ASTERISK, “*”)` character as a wildcard for requesting a resource object of a given type. The `*`-character serves as a wildcard for requesting all accessible fields - **default** and **optional** - for a specific resource type and serves mainly for reducing visual complexity of otherwise large queries.
 
 ```http
 GET /articles/1?fields[article]=* HTTP/1.1
-Accept: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 ```
 
 **SHOULD** respond with
 
 ```http
 HTTP/1.1 200 OK
-Content-Type: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+Content-Type: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 
 {
     "data": {
@@ -352,14 +352,14 @@ If the server does not support wildcard-queries with this extension, a request i
 
 ```http
 GET /articles/1?fields[article]=* HTTP/1.1
-Accept: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 ```
 
 If wildcards are not supported, the server **MUST** respond with
 
 ```http
 HTTP/1.1 400 Bad request
-Content-Type: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+Content-Type: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 ```
 
 The response **SHOULD** include a document with a top-level error member that contains one or more error objects providing further details on the fields that caused the error. If this extension is used, but wildcards are not supported, an appropriate message **SHOULD** appear in the error object.
@@ -375,7 +375,7 @@ The response **SHOULD** include a document with a top-level error member that co
 }
 ```
 
-Wildcards represent **all** fields of a resource object. Fields being prefixed with a `+ (U+002B PLUS SIGN, “+”)` and `- (U+002D HYPHEN-MINUS, “-“)` are computed relative against the list of **all** fields of a resource object. Thus, including a wildcard with a `fields[TYPE]` query makes sense if the client wants to explixitly exclude fields, since fields marked as **additional** are considered by the wildcard anyway:
+Wildcards represent **all** fields of a resource object. Fields being prefixed with a `+ (U+002B PLUS SIGN, “+”)` and `- (U+002D HYPHEN-MINUS, “-“)` are computed relative against the list of **all** fields of a resource object. Thus, including a wildcard with a `fields[TYPE]` query makes sense if the client wants to explixitly exclude fields, since fields marked as **additional** are already represented by the wildcard:
 
 ```http
 GET /articles/1 HTTP/1.1
@@ -386,14 +386,14 @@ gives the same response as
 
 ```http
 GET /articles/1?fields[article]=*,-version HTTP/1.1
-Accept: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 ```
 
 And if the server supports wildcard with this extension, it **MUST** respond with
 
 ```http
 HTTP/1.1 200 OK
-Content-Type: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+Content-Type: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 
 {
     "data": {
