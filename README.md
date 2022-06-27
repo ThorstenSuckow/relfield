@@ -224,5 +224,246 @@ Content-Type: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/re
 }
 ```
 
+## Processing
+There are no restrictions to the methods used with the HTTP requests sent with this extension.
 
-### Wildcards
+If any operation in a request with this extension fails, the server **MUST** respond as described in the [base specification](https://jsonapi.org/) of the JSON:API.
+
+ An array of one or more [error objects](https://jsonapi.org/format/#errors) **SHOULD** be returned, each with a source member that contains a pointer to the source of the problem in the request document.
+ 
+### Redundancy of fields
+
+- If a client requests a resource with **additional** fields that are usually defined in the list of default fields for the resource object and are accessible by the client, the response **MUST** treat these fields as if they were missing from the query-parameter.
+
+```http
+GET /articles/1?fields[article]=+title HTTP/1.1
+Accept: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+```
+
+**MUST** respond with
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+
+{
+    "data": {
+        "id": 1,
+        "type": "article",
+        "attributes": {
+            "title": "Lorem ipsum",
+            "author": "Jo Vongoe The",
+            "date": "2022-06-25 18:00:00",
+            "teaser": "Lorem ipsum dolor sit amet!"
+            "text": "Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam nonummy nibh euismod tincidunt ut laoreet dolore magna aliquam erat volutpat. Ut wisi enim ad minim veniam, quis nostrud exerci tation ullamcorper suscipit lobortis nisl ut aliquip ex ea commodo consequat. Duis autem vel eum iriure dolor in hendrerit in vulputate velit esse molestie consequat, vel illum dolore eu feugiat nulla facilisis at vero et accumsan et iusto odio dignissim qui blandit praesent luptatum zzril delenit augue duis dolore te feugait nulla facilisi."
+        }
+    }
+}
+```
+
+
+- If a client requests a resource with **excluded** fields that are usually not defined in the list of default fields for the resource object, the response **MUST** treat these fields as if they were missing from the query-parameter.
+
+```http
+GET /articles/1?fields[article]=-version HTTP/1.1
+Accept: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+```
+
+**MUST** respond with
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+
+{
+    "data": {
+        "id": 1,
+        "type": "article",
+        "attributes": {
+            "title": "Lorem ipsum",
+            "author": "Jo Vongoe The",
+            "date": "2022-06-25 18:00:00",
+            "teaser": "Lorem ipsum dolor sit amet!"
+            "text": "Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam nonummy nibh euismod tincidunt ut laoreet dolore magna aliquam erat volutpat. Ut wisi enim ad minim veniam, quis nostrud exerci tation ullamcorper suscipit lobortis nisl ut aliquip ex ea commodo consequat. Duis autem vel eum iriure dolor in hendrerit in vulputate velit esse molestie consequat, vel illum dolore eu feugiat nulla facilisis at vero et accumsan et iusto odio dignissim qui blandit praesent luptatum zzril delenit augue duis dolore te feugait nulla facilisi."
+        }
+    }
+}
+```
+
+### Mutual exclusivity of `fields[TYPE]`-parameter values
+
+ - If a client uses the additional prefixes for identifying fields as **additional** `+ (U+002B PLUS SIGN, “+”)` and/or **excluded** `- (U+002D HYPHEN-MINUS, “-“)` for the `fields[TYPE]` parameter, all fields appearing in the parameter's comma `(U+002C COMMA, “,”)` separated value list **MUST** be introduced with any of this prefixes. Omitting a prefix for a field-identifier **MUST** be responded with a `400 BAD REQUEST`: 
+
+Example (using the syntax according to base specification with this extension):
+```http
+GET /articles/1?fields[article]=version,title HTTP/1.1
+Accept: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+```
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+```
+
+Example (using the syntax according to base specification mixed with syntax introduced with this extension):
+```http
+GET /articles/1?fields[article]=version,-title HTTP/1.1
+Accept: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+```
+
+**MUST** respond with
+```http
+HTTP/1.1 400 Bad Request
+Content-Type: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+```
+
+The response **SHOULD** include a document with a top-level error member that contains one or more error object providing further details on the fields that caused the error. If this extension is used, prefixed fields are given precedence, and only fields identified after the base specifications **SHOULD** appear in the error object.
+
+```json
+{
+    "errors": [{
+        "code": "123",
+        "source": {"parameter": "fields[article]"},
+        "title": "Bad Request",
+        "detail": "The prefix + or - for the field \"version\" is missing."
+    }]
+}
+```
+
+### Inaccessible fields
+
+ - If the client requests an **additional** field that it is not readable by the client, the server **MUST** respond with a `403 Forbidden`. The response **SHOULD** include a document with a top-level error member that contains one or more error object providing further details on the inaccessible field.
+
+Example (`secretfield` not readable by the client):
+```http
+GET /articles/1?fields[article]=+secretfield HTTP/1.1
+Accept: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+```
+
+**MUST** respond with 
+
+```http
+HTTP/1.1 403 Forbidden
+Content-Type: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+```
+
+and **SHOULD** include
+```json
+{
+    "errors": [{
+        "code": "123",
+        "source": {"pointer": "/data/attributes/secretfield"},
+        "title": "Access forbidden",
+        "detail": "secretfield may not be accessed."
+    }]
+}
+```
+
+
+- If the client issues a request that **excludes** a field that is usually not readable by the client, the server **SHOULD** treat the request as valid and proceed with its response according to its implementation. A `403 Forbidden` response **MAY** be sent for very restrictive systems.
+
+Example (`secretfield` not readable by the client):
+```http
+GET /articles/1?fields[article]=-secretfield HTTP/1.1
+Accept: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+```
+
+**SHOULD** respond with 
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+```
+
+## Wildcards
+
+A server using this extension **SHOULD** suport the `* (U+002A ASTERISK, “*”)` character as a wildcard for requesting a resource object of a given type. The `*`-character serves as a wildcard for requesting all fields - **default** and **optional** - for a specific resource type and serves mainly to reducy visual complexity of queries.
+
+```http
+GET /articles/1?fields[article]=* HTTP/1.1
+Accept: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+```
+
+**MAY** respond with
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+
+{
+    "data": {
+        "id": 1,
+        "type": "article",
+        "attributes": {
+            "title": "Lorem ipsum",
+            "author": "Jo Vongoe The",
+            "date": "2022-06-25 18:00:00",
+            "teaser": "Lorem ipsum dolor sit amet!"
+            "text": "Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam nonummy nibh euismod tincidunt ut laoreet dolore magna aliquam erat volutpat. Ut wisi enim ad minim veniam, quis nostrud exerci tation ullamcorper suscipit lobortis nisl ut aliquip ex ea commodo consequat. Duis autem vel eum iriure dolor in hendrerit in vulputate velit esse molestie consequat, vel illum dolore eu feugiat nulla facilisis at vero et accumsan et iusto odio dignissim qui blandit praesent luptatum zzril delenit augue duis dolore te feugait nulla facilisi.",
+            "version": "1.0"
+        }
+    }
+}
+```
+
+If the server does not support wildcard-queries with this extension, a request including a wildcard for the query-parameter `fields[TYPE]` must be responded with `400 Bad Request`:
+
+```http
+GET /articles/1?fields[article]=* HTTP/1.1
+Accept: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+```
+
+If wildcards are not supported, the server **MUST** respond with
+
+```http
+HTTP/1.1 400 Bad request
+Content-Type: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+```
+
+The response **SHOULD** include a document with a top-level error member that contains one or more error object providing further details on the fields that caused the error. If this extension is used, but wildcards are not supported, an appropriate message **SHOULD** appear in the error object.
+
+```json
+{
+    "errors": [{
+        "code": "123",
+        "source": {"parameter": "fields[article]"},
+        "title": "Bad Request",
+        "detail": "This server does not support wildcards for fieldsets."
+    }]
+}
+```
+
+Wildcards represent **all** fields of a resource object. Fields being prefixed with a `+ (U+002B PLUS SIGN, “+”)` and `- (U+002D HYPHEN-MINUS, “-“)` are computed relative against the list of **all** fields of a resource object. Thus, including a wildcard with a `fields[TYPE]` query that has **additional** and/or **excluded** fields is treated as if the wildcard was omitted:
+
+```http
+GET /articles/1?fields[article]=-version HTTP/1.1
+Accept: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+```
+
+is the same as 
+
+```http
+GET /articles/1?fields[article]=*,-version HTTP/1.1
+Accept: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+```
+
+If the server supports wildcard with this extension, it **MUST** respond with
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
+
+{
+    "data": {
+        "id": 1,
+        "type": "article",
+        "attributes": {
+            "title": "Lorem ipsum",
+            "author": "Jo Vongoe The",
+            "date": "2022-06-25 18:00:00",
+            "teaser": "Lorem ipsum dolor sit amet!"
+            "text": "Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam nonummy nibh euismod tincidunt ut laoreet dolore magna aliquam erat volutpat. Ut wisi enim ad minim veniam, quis nostrud exerci tation ullamcorper suscipit lobortis nisl ut aliquip ex ea commodo consequat. Duis autem vel eum iriure dolor in hendrerit in vulputate velit esse molestie consequat, vel illum dolore eu feugiat nulla facilisis at vero et accumsan et iusto odio dignissim qui blandit praesent luptatum zzril delenit augue duis dolore te feugait nulla facilisi."
+        }
+    }
+}
+```
