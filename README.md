@@ -233,64 +233,12 @@ If any operation in a request with this extension fails, the server **MUST** res
  
 ### Redundancy of fields
 
-- If a client requests a resource with **additional** fields that are usually defined in the list of default fields for the resource object and are accessible by the client, the response **MUST** treat these fields as if they were missing from the query-parameter.
-
-```http
-GET /articles/1?fields[article]=+title HTTP/1.1
-Accept: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
-```
-
-**MUST** respond with
-
-```http
-HTTP/1.1 200 OK
-Content-Type: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
-
-{
-    "data": {
-        "id": 1,
-        "type": "article",
-        "attributes": {
-            "title": "Lorem ipsum",
-            "author": "Jo Vongoe The",
-            "date": "2022-06-25 18:00:00",
-            "teaser": "Lorem ipsum dolor sit amet!"
-            "text": "Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam nonummy nibh euismod tincidunt ut laoreet dolore magna aliquam erat volutpat. Ut wisi enim ad minim veniam, quis nostrud exerci tation ullamcorper suscipit lobortis nisl ut aliquip ex ea commodo consequat. Duis autem vel eum iriure dolor in hendrerit in vulputate velit esse molestie consequat, vel illum dolore eu feugiat nulla facilisis at vero et accumsan et iusto odio dignissim qui blandit praesent luptatum zzril delenit augue duis dolore te feugait nulla facilisi."
-        }
-    }
-}
-```
+There is **no** specific treatment for 
+ - fields requested as **additional**, that are already part of the default list of fields of the resource object
+ - fields requested as **excluded**, that are already missing from the default list of fields of the resource object
 
 
-- If a client requests a resource with **excluded** fields that are usually not defined in the list of default fields for the resource object, the response **MUST** treat these fields as if they were missing from the query-parameter.
-
-```http
-GET /articles/1?fields[article]=-version HTTP/1.1
-Accept: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
-```
-
-**MUST** respond with
-
-```http
-HTTP/1.1 200 OK
-Content-Type: application/vnd.api+json;ext="https://github.com/ThorstenSuckow/relfield"
-
-{
-    "data": {
-        "id": 1,
-        "type": "article",
-        "attributes": {
-            "title": "Lorem ipsum",
-            "author": "Jo Vongoe The",
-            "date": "2022-06-25 18:00:00",
-            "teaser": "Lorem ipsum dolor sit amet!"
-            "text": "Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam nonummy nibh euismod tincidunt ut laoreet dolore magna aliquam erat volutpat. Ut wisi enim ad minim veniam, quis nostrud exerci tation ullamcorper suscipit lobortis nisl ut aliquip ex ea commodo consequat. Duis autem vel eum iriure dolor in hendrerit in vulputate velit esse molestie consequat, vel illum dolore eu feugiat nulla facilisis at vero et accumsan et iusto odio dignissim qui blandit praesent luptatum zzril delenit augue duis dolore te feugait nulla facilisi."
-        }
-    }
-}
-```
-
-### Mutual exclusivity of `fields[TYPE]`-parameter values
+### Mutual exclusivity of `fields[TYPE]`-parameter syntax
 
  - If a client uses the additional prefixes for identifying fields as **additional** `+ (U+002B PLUS SIGN, “+”)` and/or **excluded** `- (U+002D HYPHEN-MINUS, “-“)` for the `fields[TYPE]` parameter, all fields appearing in the parameter's comma `(U+002C COMMA, “,”)` separated value list **MUST** be introduced with any of this prefixes. Omitting a prefix for a field-identifier **MUST** be responded with a `400 BAD REQUEST`: 
 
