@@ -47,7 +47,7 @@ This document uses the following data for demonstrating behavior specified by th
     "date": "2022-06-25 18:00:00",
     "teaser": "Lorem ipsum dolor sit amet!"
     "text": "Lorem ipsum dolor sit amet, consectetuer adipiscing elit, [...]",
-    "version: "v1.0",
+    "version": "v1.0",
     "secretfield: "?"
 }
 ```
