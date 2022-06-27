@@ -21,7 +21,7 @@ Note: JSON:API extensions can only introduce new document
 members using a reserved namespace as a prefix.
 ```
 
-## Used data as an example with this document
+## Example data for this document
 This document uses the following data for demonstrating behavior specified by the JSON:API, and for demonstrating behavior introduced with this extension:
 
 ### `article` Value Object (type: `article`)
