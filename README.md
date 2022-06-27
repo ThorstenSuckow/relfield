@@ -48,7 +48,7 @@ This document uses the following data for demonstrating behavior specified by th
     "teaser": "Lorem ipsum dolor sit amet!"
     "text": "Lorem ipsum dolor sit amet, consectetuer adipiscing elit, [...]",
     "version": "v1.0",
-    "secretfield: "?"
+    "secretfield": "?"
 }
 ```
 
