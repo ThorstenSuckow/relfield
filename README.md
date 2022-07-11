@@ -12,7 +12,7 @@ won't refer to a specific version.
 
 ```
 Note: The following examples show unencoded [ and ] and : characters 
-in URIs simply for readability. In practice, these characters must 
+in query strings simply for readability. In practice, these characters must 
 be percent-encoded, per the requirements in RFC 3986.
 ```
 
