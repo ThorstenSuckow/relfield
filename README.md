@@ -241,7 +241,7 @@ There is **no** specific treatment for
  - fields requested as **excluded**, that are already missing from the default list of fields of the resource object
 
 ### Mutual exclusivity of `relfield:fields[TYPE]`- and `fields[TYPE]`-parameter
-If a client sends a request containing both `relfield:fields[TYPE]`- and `fields[TYPE]`-parameter, where `TYPE` refers to the same type of resource object being, the server **MUST** respond with a `400 Bad Request`:
+If a client sends a request containing both `relfield:fields[TYPE]`- and `fields[TYPE]`-parameter, where `TYPE` refers to the same type of resource object, the server **MUST** respond with a `400 Bad Request`:
 
 ```http
 GET /articles/1?relfield:fields[article]=version&fields[article]=title HTTP/1.1
