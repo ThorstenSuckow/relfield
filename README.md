@@ -444,3 +444,13 @@ Content-Type: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/rel
     }
 }
 ```
+
+If a wildcard is used with the query parameter value, all fields specified with this value **MUST** be prefixed. Although this extension allows for specifying no prefixes at all for falling back to regular sparse fieldset behavior, mixing both is not allowed:
+
+The server **MUST** respond to queries like 
+```http
+GET /articles/1?relfield:fields[article]=*,version,title HTTP/1.1
+Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
+```
+
+with a `400 Bad Request` if the server supports wildcards. 
