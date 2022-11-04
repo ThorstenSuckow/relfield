@@ -5,13 +5,12 @@ This extension provides additional query syntax for clients that use [Sparse Fie
 It allows the client to inform the server about the fields that should be included with or excluded from a resource object.
 
 ```
-Note: JSON:API defines itself to be always backwards compatible. 
+Note: 
+JSON:API defines itself to be always backwards compatible. 
 For this reason, any mentioning of the JSON:API in this document
 won't refer to a specific version.
-```
 
-```
-Note: The following examples show unencoded [ and ] and : characters 
+The following examples show unencoded [ and ] and : characters 
 in query strings simply for readability. In practice, these characters must 
 be percent-encoded, per the requirements in RFC 3986.
 ```
@@ -135,18 +134,105 @@ The following is specified:
 
 3. If a client does not specify the set of fields for a given resource type, the server **MAY** send all fields, a subset of fields, or no fields for that resource type.
 
-## Sparse fieldset with the `relfied`-extension
-This extension expands on the syntax for the values used with sparse fieldsets and introduces two new characters as possible prefixes for fields:
+## Sparse Fieldsets with the `relfied`-extension
+This extension adds new semantics and syntax for querying fieldsets. It introduces two new characters as possible prefixes for fields:
 
 - `+ (U+002B PLUS SIGN, “+”)`
 - `- (U+002D HYPHEN-MINUS, “-“)`
 
-Used as the first character in front of a field name provided with the `relfield:fields[TYPE]`-parameter, they describe **additional** (`+`) and **excluded** (`-`) fields.
+When they are used as the first character in front of a field name provided with the `relfield:fields[TYPE]`-parameter, they describe **additional** (`+`) and **excluded** (`-`) fields.
+
+This extension also introduces a wildcard character `* (U+002A ASTERISK, “*”)` for inclusion (`*`) of whole sets of fields of a resource. 
 
 ### Additional fields
 
 **Additional fields** are fields that are **added** to the list of **default fields** that should be included with the response object, and prefixed with `+ (U+002B PLUS SIGN, “+”)`:
 
+```http
+GET /articles/1?relfield:fields[article]=+version HTTP/1.1
+Accept: application/vnd.api+json;ext=https://conjoon.org/json-api/ext/relfield
+```
+
+returns all the default fields, including the `version` field. 
+
+### Excluded fields
+
+**Excluded fields** are fields that should be **excluded** from the list of **default fields** returned with the response object and prefixed with `- (U+002D HYPHEN-MINUS, “-“)`: 
+
+```http
+GET /articles/1?relfield:fields[article]=-text,-teaser HTTP/1.1
+Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
+```
+
+includes the default fields for the `article` resource object, without the fields `text` and `teaser`. 
+
+### Wildcard Queries
+The `* (U+002A ASTERISK, “*”)`-character serves as a wildcard for requesting all accessible fields - **default** and **optional** - for a specific resource type and serves mainly for reducing visual complexity of otherwise large queries. 
+
+```http
+GET /articles/1?relfield:fields[article]=* HTTP/1.1
+Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
+```
+
+returns the resource object with **all** (default & optional) fields available.
+
+Wildcards represent all fields of a resource object. Additional fields specified with the query and mandatory prefixed with a `+ (U+002B PLUS SIGN, “+”)` or `- (U+002D HYPHEN-MINUS, “-“)` are computed relative against the list of **all** (`*`) fields of a resource object. Thus, including a wildcard with a `relfielf:fields[TYPE]` query makes sense if the client wants to explixitly exclude fields.
+
+## Processing
+There are no restrictions to the methods used with the HTTP requests sent with this extension.
+
+If any operation in a request with this extension fails, the server **MUST** respond as described in the [base specification](https://jsonapi.org/) of the JSON:API. An array of one or more [error objects](https://jsonapi.org/format/#errors) **SHOULD** be returned, each with a source member that contains a pointer to the source of the problem in the request document.
+ 
+### Compliance with base specifications for fieldsets 
+If a client uses the additional prefixes for identifying fields as **additional** `+ (U+002B PLUS SIGN, “+”)` and/or **excluded** `- (U+002D HYPHEN-MINUS, “-“)` for the `relfield:fields[TYPE]` parameter, omitting such a character for any field-identifier **MUST** be responded with a `400 BAD REQUEST`: 
+
+```http
+GET /articles/1?relfield:fields[article]=version,-title HTTP/1.1
+Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
+```
+
+responds with
+
+```http
+HTTP/1.1 400 Bad Request
+Content-Type: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
+```
+
+
+### Redundancy of fields
+There is **no** specific treatment for 
+ - fields requested as **additional**, that are already part of the default list of fields of the resource object
+ - fields requested as **excluded**, that are already missing from the default list of fields of the resource object
+
+
+### Mutual exclusivity of `relfield:fields[TYPE]`- and `fields[TYPE]`-parameter
+If a client sends a request containing both `relfield:fields[TYPE]`- and `fields[TYPE]`-parameter, where `TYPE` refers to the same type of resource object, the server **MUST** respond with a `400 Bad Request`.
+
+If the client refers to different types of resource objects with `TYPE` and each fieldset specified with the query string, the server **MUST** treat the requested fieldsets as per their specifications.
+
+### Error Handling
+The response **SHOULD** include a document with a top-level error member that contains one or more error objects providing further details on the fields that caused the error. If a prefix for a field is missing, this field **SHOULD** appear in the error object.
+
+```json
+{
+    "errors": [{
+        "code": "123",
+        "source": {"parameter": "relfield:fields[article]"},
+        "title": "Bad Request",
+        "detail": "Missing prefix for field 'version'."
+    }]
+}
+```
+
+#### Inaccessible fields
+
+ - If the client requests an **additional** field that is not readable by the client, the server **SHOULD** respond with a `403 Forbidden`. The response **SHOULD** include a document with a top-level error member that contains one or more error objects providing further details on the inaccessible field.
+
+- If the client issues a request that **excludes** a field that is usually not readable by the client, the server **SHOULD** treat the request as valid and proceed with its response according to its implementation. A `403 Forbidden` response **MAY** be sent for very restrictive systems.
+
+## Examples
+
+### `article` includes all default fields and the `version` field
 ```http
 GET /articles/1?relfield:fields[article]=+version HTTP/1.1
 Accept: application/vnd.api+json;ext=https://conjoon.org/json-api/ext/relfield
@@ -174,34 +260,7 @@ Content-Type: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/rel
 }
 ```
 
-If the `+`-character would be omitted in this example, the extension would respond in accordance with the base specification: 
-
-```http
-GET /articles/1?relfield:fields[article]=version HTTP/1.1
-Accept: application/vnd.api+json;ext=https://conjoon.org/json-api/ext/relfield
-```
-
-responds with
-
-```http
-HTTP/1.1 200 OK
-Content-Type: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
-
-{
-    "data": {
-        "id": 1,
-        "type": "article",
-        "attributes": {
-            "version": "v1.0"
-        }
-    }
-}
-```
-
-### Excluded fields
-
-**Excluded fields** are fields that should be **excluded** from the list of **default fields** returned with the response object and prefixed with `- (U+002D HYPHEN-MINUS, “-“)`: 
-
+### Excluding `text` and `teaser` from the list of default fields of an `article`
 ```http
 GET /articles/1?relfield:fields[article]=-text,-teaser HTTP/1.1
 Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
@@ -226,25 +285,17 @@ Content-Type: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/rel
 }
 ```
 
-## Processing
-There are no restrictions to the methods used with the HTTP requests sent with this extension.
-
-If any operation in a request with this extension fails, the server **MUST** respond as described in the [base specification](https://jsonapi.org/) of the JSON:API. An array of one or more [error objects](https://jsonapi.org/format/#errors) **SHOULD** be returned, each with a source member that contains a pointer to the source of the problem in the request document.
- 
-### Compliance with base specifications for fieldsets 
-This extension **MUST** respond in accordance with the base specification for [sparse fieldsets](https://jsonapi.org/format/#fetching-sparse-fieldsets), if no prefixes for fields are used with the `relfield:fields[TYPE]` parameter. 
-
-### Redundancy of fields
-
-There is **no** specific treatment for 
- - fields requested as **additional**, that are already part of the default list of fields of the resource object
- - fields requested as **excluded**, that are already missing from the default list of fields of the resource object
-
-### Mutual exclusivity of `relfield:fields[TYPE]`- and `fields[TYPE]`-parameter
-If a client sends a request containing both `relfield:fields[TYPE]`- and `fields[TYPE]`-parameter, where `TYPE` refers to the same type of resource object, the server **MUST** respond with a `400 Bad Request`:
-
+### Using sparse fieldsets with this extension for a different `TYPE`
 ```http
-GET /articles/1?relfield:fields[article]=version&fields[article]=title HTTP/1.1
+GET /articles/1?relfield:fields[article]=+version&fields[comment]=author HTTP/1.1
+Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
+```
+
+In this example, the fields for `article` must be computed as per `relfield` specifications, and the fields for `comment` must be computed as per [base specifications](https://jsonapi.org/format/#fetching-sparse-fieldsets).
+
+### `400 Bad Request`: Using sparse fieldsets with this extension for the same `TYPE`
+```http
+GET /articles/1?relfield:fields[article]=+version&fields[article]=title HTTP/1.1
 Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 ```
 
@@ -254,34 +305,7 @@ HTTP/1.1 400 Bad Request
 Content-Type: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 ```
 
-If the client refers to different types of resource objects with each fieldset specified with the query string, the server **MUST** treat the requested fieldsets as per their specifications:
-
-```http
-GET /articles/1?relfield:fields[article]=version&fields[comment]=author HTTP/1.1
-Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
-```
-
-In this example, the fields for `article` must be computed as per `relfield` specifications, and the fields for `comment` must be computed as per base specifications.
-
-
-### Mutual exclusivity of `relfield:fields[TYPE]`-parameter syntax
-
- - If a client uses the additional prefixes for identifying fields as **additional** `+ (U+002B PLUS SIGN, “+”)` and/or **excluded** `- (U+002D HYPHEN-MINUS, “-“)` for the `relfield:fields[TYPE]` parameter, all fields appearing in the parameter's comma `(U+002C COMMA, “,”)` separated value list **MUST** be introduced with a `+`- or `-`-character. Omitting such a character for any field-identifier in a list where these prefixes appear **MUST** be responded with a `400 BAD REQUEST`: 
-
-Example (using the syntax according to base specification with this extension):
-```http
-GET /articles/1?relfield:fields[article]=version,title HTTP/1.1
-Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
-```
-
-responds with
-
-```http
-HTTP/1.1 200 OK
-Content-Type: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
-```
-
-Example (using the syntax according to base specification mixed with syntax introduced with this extension):
+### `400 Bad Request`: Omitting prefixes with this extension for field values
 ```http
 GET /articles/1?relfield:fields[article]=version,-title HTTP/1.1
 Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
@@ -293,24 +317,25 @@ HTTP/1.1 400 Bad Request
 Content-Type: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 ```
 
-The response **SHOULD** include a document with a top-level error member that contains one or more error objects providing further details on the fields that caused the error. If this extension is used, prefixed fields are given precedence, and only fields where the prefix is missing **SHOULD** appear in the error object.
+### Requesting fields with inaccessible fields excluded
+The client issues a request that **excludes** `secretfield`, which is not redable for the client.
 
-```json
-{
-    "errors": [{
-        "code": "123",
-        "source": {"parameter": "relfield:fields[article]"},
-        "title": "Bad Request",
-        "detail": "Missing prefix for field version."
-    }]
-}
+```http
+GET /articles/1?relfield:fields[article]=-secretfield HTTP/1.1
+Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 ```
 
-### Inaccessible fields
+**SHOULD** respond with 
 
- - If the client requests an **additional** field that is not readable by the client, the server **SHOULD** respond with a `403 Forbidden`. The response **SHOULD** include a document with a top-level error member that contains one or more error objects providing further details on the inaccessible field.
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
+```
 
-Example (`secretfield` not readable by the client):
+
+### `403 Bad Request`: Requesting inaccessible fields
+The client requests `secretfield`, which is not readable for this client:
+
 ```http
 GET /articles/1?relfield:fields[article]=+secretfield HTTP/1.1
 Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
@@ -335,25 +360,9 @@ and **SHOULD** include
 }
 ```
 
-- If the client issues a request that **excludes** a field that is usually not readable by the client, the server **SHOULD** treat the request as valid and proceed with its response according to its implementation. A `403 Forbidden` response **MAY** be sent for very restrictive systems.
+### Wildcard Queries
 
-Example (`secretfield` not readable by the client):
-```http
-GET /articles/1?relfield:fields[article]=-secretfield HTTP/1.1
-Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
-```
-
-**SHOULD** respond with 
-
-```http
-HTTP/1.1 200 OK
-Content-Type: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
-```
-
-## Wildcard Queries
-
-A server using this extension **SHOULD** suport the `* (U+002A ASTERISK, “*”)` character as a wildcard for requesting a resource object of a given type. The `*`-character serves as a wildcard for requesting all accessible fields - **default** and **optional** - for a specific resource type and serves mainly for reducing visual complexity of otherwise large queries.
-
+#### Requesting all fields for an `article`
 ```http
 GET /articles/1?relfield:fields[article]=* HTTP/1.1
 Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
@@ -381,50 +390,13 @@ Content-Type: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/rel
 }
 ```
 
-If the server does not support wildcard-queries with this extension, a request including a wildcard for the query-parameter `relfield:fields[TYPE]` must be responded with `400 Bad Request`:
-
+#### Requesting all fields for an `article`, excluding `version` and `teaser`
 ```http
-GET /articles/1?relfield:fields[article]=* HTTP/1.1
+GET /articles/1?relfield:fields[article]=*,-version,-teaser HTTP/1.1
 Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 ```
 
-If wildcards are not supported, the server **MUST** respond with
-
-```http
-HTTP/1.1 400 Bad request
-Content-Type: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
-```
-
-The response **SHOULD** include a document with a top-level error member that contains one or more error objects providing further details on the fields that caused the error. If this extension is used, but wildcards are not supported, an appropriate message **SHOULD** appear in the error object.
-
-```json
-{
-    "errors": [{
-        "code": "123",
-        "source": {"parameter": "fields[article]"},
-        "title": "Bad Request",
-        "detail": "This server does not support wildcards for fieldsets."
-    }]
-}
-```
-
-Wildcards represent **all** fields of a resource object. Fields being prefixed with a `+ (U+002B PLUS SIGN, “+”)` and `- (U+002D HYPHEN-MINUS, “-“)` are computed relative against the list of **all** fields of a resource object. Thus, including a wildcard with a `relfielf:fields[TYPE]` query makes sense if the client wants to explixitly exclude fields, since fields marked as **additional** are already represented by the wildcard:
-
-For the above example,
-
-```http
-GET /articles/1 HTTP/1.1
-Accept: application/vnd.api+json
-```
-
-gives the same response as 
-
-```http
-GET /articles/1?relfield:fields[article]=*,-version HTTP/1.1
-Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
-```
-
-And if the server supports wildcard with this extension, it **MUST** respond with
+responds with
 
 ```http
 HTTP/1.1 200 OK
@@ -437,20 +409,12 @@ Content-Type: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/rel
         "attributes": {
             "title": "Lorem ipsum",
             "author": "Jo Vongoe The",
-            "date": "2022-06-25 18:00:00",
-            "teaser": "Lorem ipsum dolor sit amet!"
+            "date": "2022-06-25 18:00:00",      
             "text": "Lorem ipsum dolor sit amet, consectetuer adipiscing elit, [...]"
         }
     }
 }
 ```
 
-If a wildcard is used with the query parameter value, all fields specified with this value **MUST** be prefixed. Although this extension allows for specifying no prefixes at all for falling back to regular sparse fieldset behavior, mixing both is not allowed:
-
-The server **MUST** respond to queries like 
-```http
-GET /articles/1?relfield:fields[article]=*,version,title HTTP/1.1
-Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
-```
-
-with a `400 Bad Request` if the server supports wildcards. 
+## Similar API implementations 
+The [bitbucket](https://bitbucket.org/) API of Atlassian provides similar behavior with their use of the `fields paramter` with [partial responses](https://developer.atlassian.com/cloud/bitbucket/rest/intro/#partial-response).
