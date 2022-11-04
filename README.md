@@ -29,7 +29,7 @@ members using a reserved namespace as a prefix.
 ## Example data for this document
 This document uses the following data for demonstrating behavior specified by the JSON:API, and for demonstrating behavior introduced with this extension:
 
-### `article` Value Object (type: `article`)
+### `article` Entity (type: `article`)
 
 |  Field | Type | Description |   Default | Optional | 
 |--------|------|--------------|----------|----------|
