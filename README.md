@@ -5,7 +5,9 @@ This extension provides query-syntax and -semantics for inclusion and exclusion 
 Note: 
 JSON:API defines itself to be always backwards compatible.For this reason, any mentioning of the JSON:API in this document won't refer to a specific version.
 
-The following examples show unencoded [ and ] and : characters in query strings simply for readability. In practice, these characters must be percent-encoded, per the requirements in RFC 3986.
+The following examples show unencoded [ and ] and : and + characters in query strings simply for readability. In practice, these characters must be percent-encoded, per the requirements in RFC 3986.
+
+When using the +additionalField syntax in the query string, the "+" must be percent-encoded as "%2B".
 ```
 
 ## URI
