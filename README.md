@@ -5,9 +5,7 @@ This extension provides query-syntax and -semantics for inclusion and exclusion 
 Note: 
 JSON:API defines itself to be always backwards compatible.For this reason, any mentioning of the JSON:API in this document won't refer to a specific version.
 
-The following examples show unencoded [ and ] and : and + characters in query strings simply for readability. In practice, these characters must be percent-encoded, per the requirements in RFC 3986.
-
-When using the +additionalField syntax in the query string, the "+" must be percent-encoded as "%2B".
+The following examples show unencoded [ and ] and : characters in query strings simply for readability. In practice, these characters must be percent-encoded, per the requirements in RFC 3986.
 ```
 
 ## URI
@@ -130,21 +128,24 @@ The following is specified:
 3. If a client does not specify the set of fields for a given resource type, the server **MAY** send all fields, a subset of fields, or no fields for that resource type.
 
 ## Sparse Fieldsets with the `relfied`-extension
-This extension adds new semantics and syntax for querying fieldsets. It introduces two new characters as possible prefixes for fields:
+This extension adds new semantics and syntax for querying fieldsets. It introduces a new character as a possible prefix for fields:
 
-- `+ (U+002B PLUS SIGN, “+”)`
 - `- (U+002D HYPHEN-MINUS, “-“)`
 
-When they are used as the first character in front of a field name provided with the `relfield:fields[TYPE]`-parameter, they describe **additional** (`+`) and **excluded** (`-`) fields.
+When it is used as the first character in front of a field name provided with the `relfield:fields[TYPE]`-parameter, it describes an **excluded** (`-`) field.
+
+Any field name provided with the `relfield:fields[TYPE]`-parameter that does not carry this character is considered to be an **additional** field[^1].
 
 This extension also introduces a wildcard character `* (U+002A ASTERISK, “*”)` for inclusion (`*`) of whole sets of fields of a resource. 
 
+[^1]: Previous versions of this draft used the `+ (U+002B PLUS SIGN, “+”)` as a prefix for additional fields. This syntax was rejected to comply with already existing semantics regarding 'additional'/ 'excluded' fields. See [https://jsonapi.org/format/#fetching-sorting](https://jsonapi.org/format/#fetching-sorting).
+
 ### Additional fields
 
-**Additional fields** are fields that are **added** to the list of **default fields** that should be included with the response object, and prefixed with `+ (U+002B PLUS SIGN, “+”)`:
+**Additional fields** are fields that are **added** to the list of **default fields** that should be included with the response object:
 
 ```http
-GET /articles/1?relfield:fields[article]=+version HTTP/1.1
+GET /articles/1?relfield:fields[article]=version HTTP/1.1
 Accept: application/vnd.api+json;ext=https://conjoon.org/json-api/ext/relfield
 ```
 
@@ -171,29 +172,13 @@ Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 
 returns the resource object with **all** (default & optional) fields available.
 
-Wildcards represent all fields of a resource object. Additional fields specified with the query and mandatory prefixed with a `+ (U+002B PLUS SIGN, “+”)` or `- (U+002D HYPHEN-MINUS, “-“)` are computed relative against the list of **all** (`*`) fields of a resource object. Thus, including a wildcard with a `relfielf:fields[TYPE]` query makes sense if the client wants to explixitly exclude fields.
+Wildcards represent all fields of a resource object. Additional fields specified with the query and prefixed with a `- (U+002D HYPHEN-MINUS, “-“)` (or not prefixed at all) are computed relative against the list of **all** (`*`) fields of a resource object. Thus, including a wildcard with a `relfielf:fields[TYPE]` query makes sense if the client wants to explicitly exclude fields.
 
 ## Processing
 There are no restrictions to the methods used with the HTTP requests sent with this extension.
 
 If any operation in a request with this extension fails, the server **MUST** respond as described in the [base specification](https://jsonapi.org/) of the JSON:API. An array of one or more [error objects](https://jsonapi.org/format/#errors) **SHOULD** be returned, each with a source member that contains a pointer to the source of the problem in the request document.
  
-### Compliance with base specifications for fieldsets 
-If a client uses the additional prefixes for identifying fields as **additional** `+ (U+002B PLUS SIGN, “+”)` and/or **excluded** `- (U+002D HYPHEN-MINUS, “-“)` for the `relfield:fields[TYPE]` parameter, omitting such a character for any field-identifier **MUST** be responded with a `400 BAD REQUEST`: 
-
-```http
-GET /articles/1?relfield:fields[article]=version,-title HTTP/1.1
-Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
-```
-
-responds with
-
-```http
-HTTP/1.1 400 Bad Request
-Content-Type: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
-```
-
-
 ### Redundancy of fields
 There is **no** specific treatment for 
  - fields requested as **additional**, that are already part of the default list of fields of the resource object
@@ -229,7 +214,7 @@ The response **SHOULD** include a document with a top-level error member that co
 
 ### `article` includes all default fields and the `version` field
 ```http
-GET /articles/1?relfield:fields[article]=+version HTTP/1.1
+GET /articles/1?relfield:fields[article]=version HTTP/1.1
 Accept: application/vnd.api+json;ext=https://conjoon.org/json-api/ext/relfield
 ```
 
@@ -282,7 +267,7 @@ Content-Type: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/rel
 
 ### Using sparse fieldsets with this extension for a different `TYPE`
 ```http
-GET /articles/1?relfield:fields[article]=+version&fields[comment]=author HTTP/1.1
+GET /articles/1?relfield:fields[article]=version&fields[comment]=author HTTP/1.1
 Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 ```
 
@@ -290,7 +275,7 @@ In this example, the fields for `article` must be computed as per `relfield` spe
 
 ### `400 Bad Request`: Using sparse fieldsets with this extension for the same `TYPE`
 ```http
-GET /articles/1?relfield:fields[article]=+version&fields[article]=title HTTP/1.1
+GET /articles/1?relfield:fields[article]=version&fields[article]=title HTTP/1.1
 Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 ```
 
@@ -332,7 +317,7 @@ Content-Type: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/rel
 The client requests `secretfield`, which is not readable for this client:
 
 ```http
-GET /articles/1?relfield:fields[article]=+secretfield HTTP/1.1
+GET /articles/1?relfield:fields[article]=secretfield HTTP/1.1
 Accept: application/vnd.api+json;ext="https://conjoon.org/json-api/ext/relfield"
 ```
 
